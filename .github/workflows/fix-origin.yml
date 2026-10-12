@@ -1,0 +1,56 @@
+name: Repair Netlify room origin
+
+on:
+  push:
+    paths:
+      - '.github/workflows/fix-origin.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch request origin check
+        shell: bash
+        run: |
+          python3 - <<'PYFIX'
+          from pathlib import Path
+          p = Path('app/api/room/route.ts')
+          s = p.read_text(encoding='utf-8')
+          old = "req.headers.get('origin')&&req.headers.get('origin')!==new URL(req.url).origin"
+          anchor = "export const runtime='nodejs';\n"
+          helper = """// Allow the public Netlify origin even when the function sees an internal URL.
+          function isAllowedOrigin(req: Request): boolean {
+            const origin = req.headers.get('origin');
+            if (!origin) return true;
+            const allowed = new Set<string>([new URL(req.url).origin]);
+            if (process.env.URL) {
+              try { allowed.add(new URL(process.env.URL).origin); } catch { /* fallback */ }
+            }
+            if (process.env.SITE_NAME) {
+              allowed.add(`https://${process.env.SITE_NAME}.netlify.app`);
+            }
+            return allowed.has(origin);
+          }
+          """
+          if old in s and anchor in s:
+            s = s.replace(old, '!isAllowedOrigin(req)', 1)
+            s = s.replace(anchor, anchor + helper, 1)
+            p.write_text(s, encoding='utf-8')
+            print('Origin patch applied')
+          elif 'function isAllowedOrigin(req: Request)' in s:
+            print('Already patched')
+          else:
+            raise SystemExit('Original source differs; no changes made')
+          PYFIX
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add app/api/room/route.ts
+          if ! git diff --cached --quiet; then
+            git commit -m 'Fix Netlify room creation origin validation'
+            git push
+          fi
