@@ -1,0 +1,35 @@
+name: Import Netlify game source
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  unpack:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Unzip the project and commit source files
+        shell: bash
+        run: |
+          if [ ! -f chunqiu-chess-netlify.zip ]; then
+            echo "No deployment ZIP found; skipping."
+            exit 0
+          fi
+          unzip -oq chunqiu-chess-netlify.zip
+          test -f package.json
+          test -f netlify.toml
+          rm chunqiu-chess-netlify.zip
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if ! git diff --cached --quiet; then
+            git commit -m "Import Netlify source from ZIP"
+            git push
+          fi
