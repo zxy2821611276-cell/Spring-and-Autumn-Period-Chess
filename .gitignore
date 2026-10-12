@@ -1,0 +1,17 @@
+# Dependency and generated output
+node_modules/
+.next/
+out/
+.netlify/
+coverage/
+*.tsbuildinfo
+# Do not commit secrets
+.env
+.env.*
+!.env.example
+.DS_Store
+*.pem
+npm-debug.log*
+# Generated local test modules
+tests/.route-test.mjs
+tests/.db-test.mjs

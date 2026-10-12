@@ -1,0 +1,8 @@
+# Netlify auto-detects the Next.js App Router and its functions adapter.
+# The database is provisioned from @netlify/database and SQL migrations.
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+[build.environment]
+  NODE_VERSION = "22"
